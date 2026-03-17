@@ -1,0 +1,15 @@
+services:
+  app:
+    build: .
+    ports:
+      - "3000:3000"
+    volumes:
+      # Persist the SQLite database across container restarts
+      - task_data:/app/data
+    environment:
+      - PORT=3000
+      - DATA_DIR=/app/data
+    restart: unless-stopped
+
+volumes:
+  task_data:

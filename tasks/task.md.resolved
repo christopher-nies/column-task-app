@@ -1,0 +1,27 @@
+# Column Task App — Build Plan
+
+## Research
+- [x] Investigate colonnes.com
+- [x] Read the blog article on receipt printer productivity
+- [x] Read the "Why it works" page
+- [x] Examine the uploaded screenshot
+- [x] Check the workspace for existing code
+
+## Planning
+- [/] Write implementation plan
+- [ ] Get user approval on the plan
+
+## Execution
+- [ ] Set up project (Vite + vanilla JS/TS)
+- [ ] Build the data model (tree of tasks)
+- [ ] Build the column-based UI
+- [ ] Implement selection mode (navigate, select tasks)
+- [ ] Implement edit mode (fast text editing of tasks)
+- [ ] Implement task completion & progress indicators
+- [ ] Add keyboard navigation
+- [ ] Add persistence (localStorage)
+- [ ] Polish UI (animations, dark mode, responsive)
+
+## Verification
+- [ ] Manual browser testing of core flows
+- [ ] Verify data persistence across reloads
