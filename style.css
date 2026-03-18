@@ -731,6 +731,35 @@ body {
   opacity: 0.6;
 }
 
+/* ─── Import / Export Button (header) ───────────────── */
+
+.ie-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  color: var(--color-text-muted);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  flex-shrink: 0;
+}
+
+.ie-btn:hover {
+  background: var(--bg-task-hover);
+  border-color: var(--border-column);
+  color: var(--color-text-secondary);
+}
+
+.ie-btn.active {
+  color: var(--color-accent);
+  border-color: var(--border-accent);
+  background: rgba(201, 168, 76, 0.06);
+}
+
 /* ─── Settings Button (header) ───────────────────────── */
 
 .settings-btn {

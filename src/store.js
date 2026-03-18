@@ -354,6 +354,14 @@ export function loadSampleData() {
   emit();
 }
 
+// ─── Import / Export ──────────────────────────────────────
+
+export function importTasks(root) {
+  state.root = root;
+  state.selectedPath = [];
+  emit();
+}
+
 // ─── Event system ─────────────────────────────────────────
 
 function emit() {

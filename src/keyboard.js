@@ -16,13 +16,21 @@ import { enterEditMode, isEditing } from './editor.js';
 import { getSelectedPath, moveTask, getColumnTasks } from './store.js';
 import { getFocusedIndex } from './columns.js';
 import { isSettingsOpen, closeSettings } from './settings.js';
+import { openImportExport, closeImportExport, isImportExportOpen } from './importExport.js';
 
 export function initKeyboard() {
   document.addEventListener('keydown', handleKeyDown);
 }
 
 function handleKeyDown(e) {
-  // Close settings panel on Escape first
+  // Close import/export panel on Escape first
+  if (e.key === 'Escape' && isImportExportOpen()) {
+    e.preventDefault();
+    closeImportExport();
+    return;
+  }
+
+  // Close settings panel on Escape
   if (e.key === 'Escape' && isSettingsOpen()) {
     e.preventDefault();
     closeSettings();
@@ -100,6 +108,11 @@ function handleKeyDown(e) {
       break;
 
     default:
+      // Ctrl/Cmd+M — open import/export
+      if ((e.ctrlKey || e.metaKey) && e.key === 'm') {
+        e.preventDefault();
+        openImportExport();
+      }
       break;
   }
 }
