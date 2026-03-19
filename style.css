@@ -655,6 +655,13 @@ body {
   color: var(--color-text-muted);
 }
 
+/* Prevent iOS Safari from zooming in on focus (requires font-size >= 16px) */
+@media (max-width: 768px) {
+  .editor-textarea {
+    font-size: 16px;
+  }
+}
+
 .editor-textarea::-webkit-scrollbar {
   width: 3px;
 }
