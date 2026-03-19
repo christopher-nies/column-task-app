@@ -1,10 +1,9 @@
 services:
   app:
-    build: .
+    image: ghcr.io/christopher-nies/column-task-app:latest
     ports:
       - "3000:3000"
     volumes:
-      # Persist the SQLite database across container restarts
       - task_data:/app/data
     environment:
       - PORT=3000
