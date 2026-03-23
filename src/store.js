@@ -211,6 +211,17 @@ export function moveTask(id, direction) {
   emit();
 }
 
+export function reorderTask(id, targetIndex) {
+  const siblings = getSiblings(id);
+  const oldIndex = siblings.findIndex(n => n.id === id);
+  if (oldIndex === -1) return;
+  const [task] = siblings.splice(oldIndex, 1);
+  let insertAt = oldIndex < targetIndex ? targetIndex - 1 : targetIndex;
+  insertAt = Math.max(0, Math.min(insertAt, siblings.length));
+  siblings.splice(insertAt, 0, task);
+  emit();
+}
+
 export function indentTask(id) {
   // Make this task a child of the task above it
   const siblings = getSiblings(id);

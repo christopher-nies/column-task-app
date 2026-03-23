@@ -13,7 +13,8 @@ import {
   addTask,
   getState,
   getSelectedPath,
-  updateTaskText
+  updateTaskText,
+  reorderTask
 } from './store.js';
 
 import { enterEditMode, isEditing } from './editor.js';
@@ -23,6 +24,8 @@ import { getSettings } from './settings.js';
 let columnsContainer = null;
 let focusedColumn = 0;
 let focusedIndex = 0;
+let dragState = null;     // { taskId, columnIndex, itemIndex }
+let justDroppedId = null; // task id that just landed, cleared after animation
 
 // Track previous ring state so we can animate from old → new values
 // Map<taskId, { offset: number, percent: number, remaining: number }>
@@ -165,6 +168,7 @@ function createTaskElement(task, columnIndex, itemIndex, selectedId) {
   if (focusedColumn === columnIndex && focusedIndex === itemIndex) {
     item.classList.add('focused');
   }
+  if (task.id === justDroppedId) item.classList.add('just-landed');
 
   const group = isTaskGroup(task);
 
@@ -229,6 +233,111 @@ function createTaskElement(task, columnIndex, itemIndex, selectedId) {
     } else {
       selectTask(task.id, columnIndex);
     }
+  });
+
+  // Drag and drop — item itself moves, idle items slide out of the way
+  item.addEventListener('pointerdown', (e) => {
+    if (e.button !== 0) return;
+    if (e.target.closest('.task-checkbox, .task-indicator, button')) return;
+
+    const startY = e.clientY;
+    const columnEl = columnsContainer.querySelector(`.column[data-column-index="${columnIndex}"]`);
+    const allItems = [...columnEl.querySelectorAll('.task-item')];
+    const myIdx = allItems.indexOf(item);
+    if (myIdx === -1) return;
+
+    // Snapshot vertical centers of every item before any movement
+    const originalCenters = allItems.map(el => {
+      const r = el.getBoundingClientRect();
+      return r.top + r.height / 2;
+    });
+    // Height of one slot (item height + 2px margin gap)
+    const slotH = item.offsetHeight + 2;
+
+    let active = false;
+    let currentSlot = myIdx;
+
+    const onMove = (e) => {
+      const dy = e.clientY - startY;
+
+      if (!active) {
+        if (Math.abs(dy) < 6) return;
+        active = true;
+        dragState = { taskId: task.id, columnIndex, itemIndex };
+        item.classList.add('dragging');
+        item.style.zIndex = '100';
+        // Prime idle items for smooth transitions
+        allItems.forEach((el, i) => {
+          if (i !== myIdx) {
+            el.style.willChange = 'transform';
+            el.style.transition = 'transform 0.2s cubic-bezier(0.2, 0, 0, 1)';
+          }
+        });
+      }
+
+      // Dragged item follows cursor directly — no transition
+      item.style.transform = `translateY(${dy}px)`;
+
+      // Where is the dragged item's centre right now?
+      const draggedCenter = originalCenters[myIdx] + dy;
+
+      // Slide idle items to make room and count how many remain above
+      let slot = 0;
+      allItems.forEach((el, i) => {
+        if (i === myIdx) return;
+        const isAbove = i < myIdx;
+        const center  = originalCenters[i];
+        let shifted;
+        if (isAbove) {
+          // Originally above: slide DOWN when dragged item passes above them
+          shifted = draggedCenter < center;
+          el.style.transform = shifted ? `translateY(${slotH}px)` : 'translateY(0)';
+          if (!shifted) slot++; // still above the dragged item
+        } else {
+          // Originally below: slide UP when dragged item passes below them
+          shifted = draggedCenter > center;
+          el.style.transform = shifted ? `translateY(-${slotH}px)` : 'translateY(0)';
+          if (shifted) slot++;  // now above the dragged item
+        }
+      });
+      currentSlot = slot;
+    };
+
+    const cleanup = () => {
+      allItems.forEach(el => {
+        el.style.willChange  = '';
+        el.style.transition  = '';
+        el.style.transform   = '';
+      });
+      item.classList.remove('dragging');
+      item.style.zIndex    = '';
+      item.style.transform = '';
+    };
+
+    const onUp = () => {
+      document.removeEventListener('pointermove', onMove);
+      document.removeEventListener('pointerup',   onUp);
+      document.removeEventListener('pointercancel', onUp);
+
+      if (!active) return;
+      active = false;
+      dragState = null;
+      cleanup();
+
+      if (currentSlot !== myIdx) {
+        justDroppedId = task.id;
+        setTimeout(() => { justDroppedId = null; }, 600);
+        // currentSlot is the final index; translate to reorderTask's targetIndex
+        const targetIndex = currentSlot > myIdx ? currentSlot + 1 : currentSlot;
+        reorderTask(task.id, targetIndex);
+        focusedColumn = columnIndex;
+        focusedIndex  = currentSlot;
+      }
+    };
+
+    document.addEventListener('pointermove', onMove);
+    document.addEventListener('pointerup',   onUp);
+    document.addEventListener('pointercancel', onUp);
   });
 
   return item;
