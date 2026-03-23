@@ -1,5 +1,0 @@
-{
-  "artifactType": "ARTIFACT_TYPE_TASK",
-  "summary": "Checklist tracking the build plan for the column-based task management app. Covers research, planning, execution phases (project setup, data model, column UI, modes, keyboard nav, persistence, polish), and verification.",
-  "updatedAt": "2026-03-16T16:14:02.485240813Z"
-}

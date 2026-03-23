@@ -1,5 +1,0 @@
-{
-  "artifactType": "ARTIFACT_TYPE_IMPLEMENTATION_PLAN",
-  "summary": "Comprehensive plan for building a column-based task management web app inspired by Colonnes. Covers the tech stack (Vite + vanilla JS), data model (recursive task tree), column UI, dual interaction modes (selection + edit), keyboard navigation, progress indicators, localStorage persistence, and a polished dark-mode UI with smooth animations. Includes a verification plan with browser-based testing.",
-  "updatedAt": "2026-03-16T16:14:55.363718164Z"
-}
