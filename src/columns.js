@@ -228,10 +228,10 @@ function createTaskElement(task, columnIndex, itemIndex, selectedId) {
   item.addEventListener('click', () => {
     focusedColumn = columnIndex;
     focusedIndex = itemIndex;
+    selectTask(task.id, columnIndex);
     if (group) {
-      selectTask(task.id, columnIndex);
-    } else {
-      selectTask(task.id, columnIndex);
+      focusedColumn++;
+      focusedIndex = 0;
     }
   });
 
@@ -563,7 +563,24 @@ export function deleteFocusedTask() {
 
 export function addTaskToFocusedColumn() {
   const path = getSelectedPath();
-  const parentId = focusedColumn > 0 ? path[focusedColumn - 1] : null;
+  const focusedTask = getColumnTasks(focusedColumn)[focusedIndex];
+
+  // If the focused task is the selected task, add as its child (even if it has no children yet)
+  const lastSelectedId = path[path.length - 1];
+  let parentId;
+  if (focusedTask && focusedTask.id === lastSelectedId) {
+    parentId = focusedTask.id;
+    const node = addTask(parentId, '');
+    focusedColumn++;
+    focusedIndex = 0;
+    requestAnimationFrame(() => {
+      const el = columnsContainer.querySelector(`.task-item[data-task-id="${node.id}"] .task-text`);
+      if (el) startInlineRename(node.id, el);
+    });
+    return;
+  }
+
+  parentId = focusedColumn > 0 ? path[focusedColumn - 1] : null;
   const node = addTask(parentId, '');
   const tasks = getColumnTasks(focusedColumn);
   focusedIndex = tasks.length - 1;
