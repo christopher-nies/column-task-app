@@ -17,6 +17,7 @@ import { getSelectedPath, moveTask, getColumnTasks } from './store.js';
 import { getFocusedIndex } from './columns.js';
 import { isSettingsOpen, closeSettings } from './settings.js';
 import { openImportExport, closeImportExport, isImportExportOpen } from './importExport.js';
+import { printTasks } from './print.js';
 
 export function initKeyboard() {
   document.addEventListener('keydown', handleKeyDown);
@@ -112,6 +113,11 @@ function handleKeyDown(e) {
       if ((e.ctrlKey || e.metaKey) && e.key === 'm') {
         e.preventDefault();
         openImportExport();
+      }
+      // Ctrl/Cmd+Shift+P — print task cards
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'P') {
+        e.preventDefault();
+        printTasks();
       }
       break;
   }

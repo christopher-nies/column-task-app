@@ -5,6 +5,7 @@ import { initColumns, render } from './columns.js';
 import { initKeyboard } from './keyboard.js';
 import { initSettings, subscribeSettings, toggleSettings } from './settings.js';
 import { openImportExport } from './importExport.js';
+import { printTasks } from './print.js';
 
 async function init() {
   const app = document.getElementById('app');
@@ -53,6 +54,13 @@ async function init() {
         </div>
       </div>
       <div class="header-divider"></div>
+      <button class="print-btn" title="Print task cards (Ctrl+Shift+P)" id="print-btn">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="6 9 6 2 18 2 18 9"/>
+          <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/>
+          <rect x="6" y="14" width="12" height="8"/>
+        </svg>
+      </button>
       <button class="ie-btn" title="Import / Export (Ctrl+M)" id="ie-btn">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
@@ -76,6 +84,7 @@ async function init() {
 
   // Init settings panel (injects DOM into #app)
   initSettings(app);
+  document.getElementById('print-btn').addEventListener('click', printTasks);
   document.getElementById('ie-btn').addEventListener('click', openImportExport);
   document.getElementById('settings-btn').addEventListener('click', toggleSettings);
 
