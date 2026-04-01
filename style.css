@@ -54,6 +54,40 @@
   --stripe: 3px;
 }
 
+/* ─── Light Theme ───────────────────────────────────── */
+
+html[data-theme="light"] {
+  --bg-app:             #eeebe5;
+  --bg-header:          #e6e2db;
+  --bg-column:          #f8f6f2;
+  --bg-column-header:   #f0ede8;
+  --bg-task:            #f8f6f2;
+  --bg-task-hover:      #edeade;
+  --bg-task-selected:   #e8e5d4;
+  --bg-task-focused:    #eae8d4;
+  --color-text:           #1c1a17;
+  --color-text-secondary: #6b6452;
+  --color-text-muted:     #a09880;
+  --color-text-done:      #b8b0a0;
+  --color-accent:       #b8922e;
+  --color-accent-dim:   #9a7825;
+  --color-accent-glow:  rgba(184, 146, 46, 0.14);
+  --color-success:      #3d8c3c;
+  --color-danger:       #b83232;
+  --color-ring-bg:      #d8d4cc;
+  --border-subtle:      #d8d4ca;
+  --border-column:      #cac6be;
+  --border-task:        #d4d0c8;
+  --border-accent:      rgba(184, 146, 46, 0.4);
+  --shadow-column:      0 2px 12px rgba(0, 0, 0, 0.06), 0 0 0 1px rgba(0,0,0,0.04);
+  --shadow-task-focus:  0 0 0 1px var(--border-accent), 0 2px 8px var(--color-accent-glow);
+  --shadow-task-selected: 0 0 0 1px rgba(184, 146, 46, 0.25);
+}
+
+html[data-theme="light"] .task-item.dragging {
+  background: #e8e4dc !important;
+}
+
 /* ─── Noise texture via SVG filter ───────────────────── */
 
 body::before {
@@ -461,7 +495,7 @@ body {
 }
 
 .task-checkbox.checked svg {
-  stroke: #0e0f0f;
+  stroke: var(--bg-app);
 }
 
 /* ─── Progress Ring ──────────────────────────────────── */
@@ -1019,6 +1053,51 @@ body {
 .settings-toggle.on .settings-toggle-thumb {
   transform: translateX(14px);
   background: var(--color-accent);
+}
+
+/* ─── Settings Divider ───────────────────────────────── */
+
+.settings-divider {
+  height: 1px;
+  background: var(--border-subtle);
+  margin: 2px 14px 6px;
+}
+
+/* ─── Theme Picker ───────────────────────────────────── */
+
+.theme-picker {
+  display: flex;
+  gap: 2px;
+  background: var(--bg-app);
+  border: 1px solid var(--border-column);
+  border-radius: var(--radius-sm);
+  padding: 2px;
+  flex-shrink: 0;
+}
+
+.theme-btn {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 3px 8px;
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-xs);
+  color: var(--color-text-muted);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.theme-btn:hover {
+  color: var(--color-text-secondary);
+  background: var(--bg-task-hover);
+}
+
+.theme-btn.active {
+  background: rgba(201, 168, 76, 0.14);
+  color: var(--color-accent);
 }
 
 /* ─── Progress Ring Count Text ───────────────────────── */

@@ -4,12 +4,14 @@ const STORAGE_KEY = 'columns-settings';
 
 const DEFAULTS = {
   showCountInRing: false,
+  theme: 'dark',
 };
 
 // ─── State ────────────────────────────────────────────────
 
 let settings = { ...DEFAULTS };
 let settingsListeners = [];
+let autoMql = null;   // stored matchMedia listener for 'auto' theme
 let panelEl = null;
 let backdropEl = null;
 let _isOpen = false;
@@ -26,7 +28,33 @@ let _isOpen = false;
   } catch (e) {
     // ignore parse errors, use defaults
   }
+  applyTheme();
 })();
+
+// ─── Theme ───────────────────────────────────────────
+
+function applyTheme() {
+  // Clean up previous auto listener
+  if (autoMql) {
+    autoMql.mql.removeEventListener('change', autoMql.handler);
+    autoMql = null;
+  }
+
+  const theme = settings.theme || 'dark';
+
+  if (theme === 'auto') {
+    const mql = window.matchMedia('(prefers-color-scheme: light)');
+    const handler = (e) => {
+      document.documentElement.dataset.theme = e.matches ? 'light' : 'dark';
+    };
+    // Apply immediately
+    document.documentElement.dataset.theme = mql.matches ? 'light' : 'dark';
+    mql.addEventListener('change', handler);
+    autoMql = { mql, handler };
+  } else {
+    document.documentElement.dataset.theme = theme;
+  }
+}
 
 // ─── Public API ───────────────────────────────────────────
 
@@ -41,6 +69,7 @@ export function setSetting(key, value) {
   } catch (e) {
     // ignore storage errors
   }
+  if (key === 'theme') applyTheme();
   settingsListeners.forEach(fn => fn(settings));
 }
 
@@ -89,6 +118,21 @@ export function initSettings(appEl) {
           </div>
         </label>
       </div>
+      <div class="settings-divider"></div>
+      <div class="settings-section">
+        <div class="settings-section-label">Appearance</div>
+        <div class="settings-row">
+          <div class="settings-row-text">
+            <span class="settings-row-label">Theme</span>
+            <span class="settings-row-desc">Choose light, dark, or match your system</span>
+          </div>
+          <div class="theme-picker" id="theme-picker">
+            <button class="theme-btn ${settings.theme === 'light' ? 'active' : ''}" data-theme="light">Light</button>
+            <button class="theme-btn ${settings.theme === 'dark' ? 'active' : ''}" data-theme="dark">Dark</button>
+            <button class="theme-btn ${settings.theme === 'auto' ? 'active' : ''}" data-theme="auto">Auto</button>
+          </div>
+        </div>
+      </div>
     </div>
   `;
 
@@ -106,6 +150,16 @@ export function initSettings(appEl) {
   toggle.addEventListener('click', activateToggle);
   toggle.addEventListener('keydown', (e) => {
     if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); activateToggle(); }
+  });
+
+  // Theme picker interaction
+  const themePicker = panelEl.querySelector('#theme-picker');
+  themePicker.addEventListener('click', (e) => {
+    const btn = e.target.closest('[data-theme]');
+    if (!btn) return;
+    const theme = btn.dataset.theme;
+    setSetting('theme', theme);
+    themePicker.querySelectorAll('.theme-btn').forEach(b => b.classList.toggle('active', b.dataset.theme === theme));
   });
 
   appEl.appendChild(backdropEl);
