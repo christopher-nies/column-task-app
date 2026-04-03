@@ -75,6 +75,12 @@ export function openImportExport() {
       <div class="editor-header">
         <span class="editor-title">Import / Export</span>
         <span class="editor-hint">Edit markdown · Escape or ✕ to import &amp; close</span>
+        <button class="editor-close-btn ie-copy-btn" title="Copy as Markdown">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+          </svg>
+        </button>
         <button class="editor-close-btn ie-close-btn" title="Close">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
@@ -96,6 +102,23 @@ export function openImportExport() {
   textarea.scrollTop = 0;
 
   overlay.querySelector('.ie-close-btn').addEventListener('click', closeImportExport);
+
+  const copyBtn = overlay.querySelector('.ie-copy-btn');
+  copyBtn.addEventListener('click', () => {
+    const text = textarea.value;
+    const copied = () => {
+      const icon = copyBtn.innerHTML;
+      copyBtn.innerHTML = '<span style="font-size:10px;font-family:var(--font-mono);letter-spacing:0.04em;padding:0 2px">Copied!</span>';
+      setTimeout(() => { copyBtn.innerHTML = icon; }, 1500);
+    };
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(text).then(copied).catch(() => {});
+    } else {
+      textarea.select();
+      document.execCommand('copy');
+      copied();
+    }
+  });
 
   // Escape closes (but not while composing)
   overlay.addEventListener('keydown', e => {
