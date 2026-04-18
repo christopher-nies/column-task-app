@@ -519,6 +519,7 @@ export function drillIn() {
   if (isTaskGroup(task)) {
     focusedColumn++;
     focusedIndex = 0;
+    render();
   }
 }
 
