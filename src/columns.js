@@ -323,8 +323,7 @@ function createTaskElement(task, columnIndex, itemIndex, selectedId) {
 
     input.addEventListener('input', updatePreview);
     input.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') { e.preventDefault(); stopInlineEdit(); }
-      if (e.key === 'Escape') { e.preventDefault(); cancelInlineEdit(); }
+      if (e.key === 'Enter' || e.key === 'Escape') { e.preventDefault(); stopInlineEdit(); }
       if (e.key === 'Tab') {
         e.preventDefault();
         stopInlineEdit();
