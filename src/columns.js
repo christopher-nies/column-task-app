@@ -33,6 +33,7 @@ let focusedColumn = 0;
 let focusedIndex = 0;
 let dragState = null;     // { taskId, columnIndex, itemIndex }
 let justDroppedId = null; // task id that just landed, cleared after animation
+let pendingSlideBack = false; // set before backward navigation to trigger reverse column animation
 
 // Double-tap tracking for mobile edit
 let lastTapId = null;
@@ -160,7 +161,9 @@ export function render(force = false) {
     const column = document.createElement('div');
     column.className = 'column';
     column.dataset.columnIndex = col;
-    if (col >= existingCount) {
+    if (pendingSlideBack) {
+      column.classList.add('column-enter-back');
+    } else if (col >= existingCount) {
       column.classList.add('column-enter');
     }
 
@@ -200,13 +203,17 @@ export function render(force = false) {
     fragment.appendChild(column);
   }
 
+  const slideBack = pendingSlideBack;
+  pendingSlideBack = false;
+
   columnsContainer.innerHTML = '';
   columnsContainer.appendChild(fragment);
 
-  // Trigger enter animation
+  // Trigger enter/enter-back animation (remove the class one frame later so the
+  // browser sees the starting transform before the CSS transition fires)
   requestAnimationFrame(() => {
-    columnsContainer.querySelectorAll('.column-enter').forEach(col => {
-      col.classList.remove('column-enter');
+    columnsContainer.querySelectorAll('.column-enter, .column-enter-back').forEach(col => {
+      col.classList.remove('column-enter', 'column-enter-back');
     });
   });
 
@@ -598,14 +605,14 @@ function updateBreadcrumb() {
 
 function navigateToLevel(targetCol) {
   const path = getSelectedPath();
-  // Remember which task was selected at targetCol so we can restore focus index
   const selectedAtTarget = path[targetCol];
   const tasks = getColumnTasks(targetCol);
   const idx = selectedAtTarget ? tasks.findIndex(t => t.id === selectedAtTarget) : 0;
 
   focusedColumn = targetCol;
   focusedIndex = idx >= 0 ? idx : 0;
-  deselectColumn(targetCol); // mutates store → emit() → subscribed render()
+  if (isTouchDevice()) pendingSlideBack = true;
+  deselectColumn(targetCol); // mutates store → emit() → subscribed render() (flag consumed there)
 }
 
 function updateFocusIndicator() {

@@ -291,6 +291,11 @@ body {
   transform: translateX(20px);
 }
 
+.column-enter-back {
+  opacity: 0;
+  transform: translateX(-20px);
+}
+
 /* ─── Column Header ──────────────────────────────────── */
 
 .column-header {
