@@ -210,15 +210,12 @@ export function render(force = false) {
     });
   });
 
-  // Scroll: on touch devices snap to focused column; on desktop show rightmost
+  // Scroll: on touch devices ease to focused column; on desktop show rightmost
   requestAnimationFrame(() => {
     if (isTouchDevice()) {
       const targetEl = columnsContainer.querySelector(`.column[data-column-index="${focusedColumn}"]`);
       if (targetEl) {
-        columnsContainer.scrollTo({
-          left: targetEl.offsetLeft - columnsContainer.offsetLeft,
-          behavior: 'smooth'
-        });
+        easeScrollTo(columnsContainer, targetEl.offsetLeft - columnsContainer.offsetLeft, 340);
       }
     } else {
       const lastCol = columnsContainer.querySelector('.column:last-child');
@@ -775,6 +772,22 @@ function animateProgressRings() {
   for (const id of ringState.keys()) {
     if (!visibleIds.has(id)) ringState.delete(id);
   }
+}
+
+// Scroll `el` horizontally to `targetLeft` with a cubic ease-out curve.
+// Feels snappier and more intentional than browser behavior:'smooth'.
+function easeScrollTo(el, targetLeft, duration = 340) {
+  const startLeft = el.scrollLeft;
+  const delta = targetLeft - startLeft;
+  if (Math.abs(delta) < 1) return;
+  const startTime = performance.now();
+  const easeOutCubic = t => 1 - Math.pow(1 - t, 3);
+  function step(now) {
+    const t = Math.min((now - startTime) / duration, 1);
+    el.scrollLeft = startLeft + delta * easeOutCubic(t);
+    if (t < 1) requestAnimationFrame(step);
+  }
+  requestAnimationFrame(step);
 }
 
 function escapeHtml(str) {
