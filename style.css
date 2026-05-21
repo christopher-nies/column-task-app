@@ -610,6 +610,22 @@ body {
 
 /* ─── Inline Task Input ──────────────────────────────── */
 
+.task-text-wrapper {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.token-preview {
+  font-size: 10px;
+  font-family: var(--font-mono);
+  color: var(--color-accent);
+  padding: 1px 6px 0;
+  line-height: 1;
+  min-height: 0;
+}
+
 .task-inline-input {
   flex: 1;
   min-width: 0;

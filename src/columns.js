@@ -19,10 +19,10 @@ import {
   setTaskDate
 } from './store.js';
 
-import { isEditing, getEditingTaskId, stopInlineEdit, cancelInlineEdit } from './editor.js';
+import { isEditing, getEditingTaskId, startInlineEdit, stopInlineEdit, cancelInlineEdit } from './editor.js';
 import { playCompleteAnimation } from './animations.js';
 import { getSettings } from './settings.js';
-import { formatDateLabel, getTodayISO } from './dates.js';
+import { parseNaturalDate, formatDateLabel, getTodayISO } from './dates.js';
 
 let columnsContainer = null;
 let filterBar = null;     // stable filter-bar element, created once
@@ -299,19 +299,48 @@ function createTaskElement(task, columnIndex, itemIndex, selectedId) {
 
   // Text — inline input when this task is being edited, span otherwise
   if (task.id === getEditingTaskId()) {
+    const wrapper = document.createElement('div');
+    wrapper.className = 'task-text-wrapper';
+
     const input = document.createElement('input');
     input.className = 'task-inline-input';
     input.type = 'text';
     input.value = task.text;
+
+    const preview = document.createElement('span');
+    preview.className = 'token-preview';
+
+    const updatePreview = () => {
+      let lastDate = null;
+      const rx = /@(\S+)/g;
+      let m;
+      while ((m = rx.exec(input.value)) !== null) {
+        const parsed = parseNaturalDate(m[1]);
+        if (parsed) lastDate = parsed;
+      }
+      preview.textContent = lastDate ? `→ ${formatDateLabel(lastDate)}` : '';
+    };
+
+    input.addEventListener('input', updatePreview);
     input.addEventListener('keydown', (e) => {
       if (e.key === 'Enter') { e.preventDefault(); stopInlineEdit(); }
       if (e.key === 'Escape') { e.preventDefault(); cancelInlineEdit(); }
+      if (e.key === 'Tab') {
+        e.preventDefault();
+        stopInlineEdit();
+        if (e.shiftKey) moveFocusUp(); else moveFocusDown();
+        const nextId = getFocusedTaskId();
+        if (nextId) startInlineEdit(nextId, 'end');
+      }
       e.stopPropagation();
     });
     input.addEventListener('blur', () => {
       if (isEditing()) stopInlineEdit();
     });
-    item.appendChild(input);
+
+    wrapper.appendChild(input);
+    wrapper.appendChild(preview);
+    item.appendChild(wrapper);
   } else {
     const text = document.createElement('span');
     text.className = 'task-text';
