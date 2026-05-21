@@ -210,11 +210,21 @@ export function render(force = false) {
     });
   });
 
-  // Scroll to show the rightmost column
+  // Scroll: on touch devices snap to focused column; on desktop show rightmost
   requestAnimationFrame(() => {
-    const lastCol = columnsContainer.querySelector('.column:last-child');
-    if (lastCol) {
-      lastCol.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'end' });
+    if (isTouchDevice()) {
+      const targetEl = columnsContainer.querySelector(`.column[data-column-index="${focusedColumn}"]`);
+      if (targetEl) {
+        columnsContainer.scrollTo({
+          left: targetEl.offsetLeft - columnsContainer.offsetLeft,
+          behavior: 'smooth'
+        });
+      }
+    } else {
+      const lastCol = columnsContainer.querySelector('.column:last-child');
+      if (lastCol) {
+        lastCol.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'end' });
+      }
     }
   });
 
