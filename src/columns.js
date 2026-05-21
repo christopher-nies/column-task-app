@@ -270,7 +270,7 @@ function createTaskElement(task, columnIndex, itemIndex, selectedId) {
         allItems.forEach((el, i) => {
           if (i !== myIdx) {
             el.style.willChange = 'transform';
-            el.style.transition = 'transform 0.2s cubic-bezier(0.2, 0, 0, 1)';
+            el.style.transition = 'transform 0.15s cubic-bezier(0, 0, 0.2, 1)';
           }
         });
       }
