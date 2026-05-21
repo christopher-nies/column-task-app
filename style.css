@@ -608,6 +608,26 @@ body {
   caret-color: var(--color-accent);
 }
 
+/* ─── Inline Task Input ──────────────────────────────── */
+
+.task-inline-input {
+  flex: 1;
+  min-width: 0;
+  font-size: 13px;
+  font-family: var(--font-sans);
+  font-weight: 400;
+  letter-spacing: -0.01em;
+  line-height: 1.4;
+  background: rgba(201, 168, 76, 0.06);
+  border: 1px solid var(--border-accent);
+  border-radius: var(--radius-xs);
+  color: var(--color-text);
+  padding: 1px 5px;
+  outline: none;
+  caret-color: var(--color-accent);
+  width: 100%;
+}
+
 /* ─── Editor Overlay ─────────────────────────────────── */
 
 .editor-overlay {

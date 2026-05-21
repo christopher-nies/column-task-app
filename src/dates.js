@@ -183,3 +183,29 @@ export function formatDateLabel(iso) {
   // Everything else (further future, or any past date) → 'D MMM'.
   return `${date.getDate()} ${SHORT_MONTHS[date.getMonth()]}`;
 }
+
+/**
+ * Scan task text for @TOKEN patterns. Strip recognized date tokens and return
+ * the cleaned text plus the parsed date.
+ *
+ * Return shape: { cleanText: string, date: string|null|undefined }
+ *   - date === undefined      → no @token found; caller must NOT touch existing date
+ *   - date === null           → @clear token found; caller should clear the date
+ *   - date === 'YYYY-MM-DD'  → parsed date; caller should set it
+ *
+ * Unrecognized @tokens (e.g. @work, @home) are left in the text untouched.
+ * When multiple date tokens are present, the last one wins.
+ *
+ * @param {string} text
+ * @returns {{ cleanText: string, date: string|null|undefined }}
+ */
+export function extractDateFromText(text) {
+  let date; // undefined = no token found
+  const cleaned = text.replace(/@(\S+)/g, (match, token) => {
+    if (token === 'clear') { date = null; return ''; }
+    const parsed = parseNaturalDate(token);
+    if (parsed !== null) { date = parsed; return ''; }
+    return match; // unrecognized, leave it
+  });
+  return { cleanText: cleaned.replace(/  +/g, ' ').trim(), date };
+}

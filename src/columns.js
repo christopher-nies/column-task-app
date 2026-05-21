@@ -19,7 +19,7 @@ import {
   setTaskDate
 } from './store.js';
 
-import { enterEditMode, isEditing } from './editor.js';
+import { isEditing, getEditingTaskId, stopInlineEdit, cancelInlineEdit } from './editor.js';
 import { playCompleteAnimation } from './animations.js';
 import { getSettings } from './settings.js';
 import { formatDateLabel, getTodayISO } from './dates.js';
@@ -102,8 +102,8 @@ function createDateBadge(iso) {
   return badge;
 }
 
-export function render() {
-  if (!columnsContainer || isEditing()) return;
+export function render(force = false) {
+  if (!columnsContainer || (!force && isEditing())) return;
 
   // Filtered views replace the normal column layout entirely.
   if (activeFilter !== 'all') {
@@ -154,28 +154,6 @@ export function render() {
       header.innerHTML = `<span class="column-index">${colNum}</span><span class="column-title">${escapeHtml(parentText)}</span>`;
     }
 
-    const editBtn = document.createElement('button');
-    editBtn.className = 'column-edit-btn';
-    editBtn.title = 'Edit mode (E)';
-    editBtn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>`;
-    editBtn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      enterEditMode(col, parentId);
-    });
-    header.appendChild(editBtn);
-
-    const addBtn = document.createElement('button');
-    addBtn.className = 'column-add-btn';
-    addBtn.title = 'Add task (N)';
-    addBtn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>`;
-    addBtn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      const node = addTask(parentId, 'New task');
-      // Select and focus the new task
-      focusedColumn = col;
-      focusedIndex = tasks.length; // it was appended
-    });
-    header.appendChild(addBtn);
 
     column.appendChild(header);
 
@@ -319,11 +297,27 @@ function createTaskElement(task, columnIndex, itemIndex, selectedId) {
 
   item.appendChild(indicator);
 
-  // Text
-  const text = document.createElement('span');
-  text.className = 'task-text';
-  text.textContent = task.text;
-  item.appendChild(text);
+  // Text — inline input when this task is being edited, span otherwise
+  if (task.id === getEditingTaskId()) {
+    const input = document.createElement('input');
+    input.className = 'task-inline-input';
+    input.type = 'text';
+    input.value = task.text;
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') { e.preventDefault(); stopInlineEdit(); }
+      if (e.key === 'Escape') { e.preventDefault(); cancelInlineEdit(); }
+      e.stopPropagation();
+    });
+    input.addEventListener('blur', () => {
+      if (isEditing()) stopInlineEdit();
+    });
+    item.appendChild(input);
+  } else {
+    const text = document.createElement('span');
+    text.className = 'task-text';
+    text.textContent = task.text;
+    item.appendChild(text);
+  }
 
   // Date badge — shown only when the task has a scheduled date.
   const badge = createDateBadge(task.date);
@@ -682,54 +676,3 @@ export function deleteFocusedTask() {
   }
 }
 
-export function addTaskToFocusedColumn() {
-  const path = getSelectedPath();
-  const focusedTask = getColumnTasks(focusedColumn)[focusedIndex];
-
-  // If the focused task is the selected task, add as its child (even if it has no children yet)
-  const lastSelectedId = path[path.length - 1];
-  let parentId;
-  if (focusedTask && focusedTask.id === lastSelectedId) {
-    parentId = focusedTask.id;
-    const node = addTask(parentId, '');
-    focusedColumn++;
-    focusedIndex = 0;
-    requestAnimationFrame(() => {
-      const el = columnsContainer.querySelector(`.task-item[data-task-id="${node.id}"] .task-text`);
-      if (el) startInlineRename(node.id, el);
-    });
-    return;
-  }
-
-  parentId = focusedColumn > 0 ? path[focusedColumn - 1] : null;
-  const node = addTask(parentId, '');
-  const tasks = getColumnTasks(focusedColumn);
-  focusedIndex = tasks.length - 1;
-
-  // After render, find the new task and enable inline rename
-  requestAnimationFrame(() => {
-    const el = columnsContainer.querySelector(`.task-item[data-task-id="${node.id}"] .task-text`);
-    if (el) startInlineRename(node.id, el);
-  });
-}
-
-function startInlineRename(taskId, textEl) {
-  const input = document.createElement('input');
-  input.className = 'inline-rename';
-  input.type = 'text';
-  input.value = textEl.textContent;
-  textEl.replaceWith(input);
-  input.focus();
-
-  const finish = () => {
-    const newText = input.value.trim() || 'Untitled';
-    updateTaskText(taskId, newText);
-  };
-
-  input.addEventListener('blur', finish);
-  input.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') { e.preventDefault(); input.blur(); }
-    if (e.key === 'Escape') { e.preventDefault(); input.blur(); }
-    e.stopPropagation(); // prevent keyboard shortcuts from firing
-  });
-}

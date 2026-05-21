@@ -1,110 +1,47 @@
-// editor.js — Edit mode: turn a column into a fast text editor
+// editor.js — Inline single-task editor state
 
-import {
-  getColumnTasks,
-  replaceColumnTasks,
-  getSelectedPath,
-  subscribe
-} from './store.js';
-import { render as renderColumns } from './columns.js';
+import { render } from './columns.js';
+import { updateTaskText, setTaskDate } from './store.js';
+import { extractDateFromText } from './dates.js';
 
-let currentEditColumn = null;
-let currentParentId = null;
-let editorOverlay = null;
+let editingTaskId = null;
+let pendingCursorMode = 'end'; // 'start' | 'end'
 
-export function isEditing() {
-  return currentEditColumn !== null;
-}
+export function isEditing() { return editingTaskId !== null; }
+export function getEditingTaskId() { return editingTaskId; }
+export function getPendingCursorMode() { return pendingCursorMode; }
 
-export function enterEditMode(columnIndex, parentId) {
-  if (isEditing()) exitEditMode();
-
-  currentEditColumn = columnIndex;
-  currentParentId = parentId;
-
-  const tasks = getColumnTasks(columnIndex);
-  const text = tasks.map(t => t.text).join('\n');
-
-  // Create overlay
-  editorOverlay = document.createElement('div');
-  editorOverlay.className = 'editor-overlay';
-
-  const editorPanel = document.createElement('div');
-  editorPanel.className = 'editor-panel';
-
-  const header = document.createElement('div');
-  header.className = 'editor-header';
-  header.innerHTML = `
-    <span class="editor-title">Edit Mode</span>
-    <span class="editor-hint">One task per line · Escape to save & close</span>
-  `;
-
-  const closeBtn = document.createElement('button');
-  closeBtn.className = 'editor-close-btn';
-  closeBtn.innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>`;
-  closeBtn.addEventListener('click', () => exitEditMode());
-  header.appendChild(closeBtn);
-
-  const textarea = document.createElement('textarea');
-  textarea.className = 'editor-textarea';
-  textarea.value = text;
-  textarea.placeholder = 'Type one task per line…';
-  textarea.spellcheck = false;
-
-  textarea.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape') {
-      e.preventDefault();
-      exitEditMode();
-    }
-    e.stopPropagation(); // prevent global shortcuts
-  });
-
-  // Auto-resize
-  textarea.addEventListener('input', () => {
-    textarea.style.height = 'auto';
-    textarea.style.height = textarea.scrollHeight + 'px';
-  });
-
-  editorPanel.appendChild(header);
-  editorPanel.appendChild(textarea);
-  editorOverlay.appendChild(editorPanel);
-
-  // Click outside to close
-  editorOverlay.addEventListener('click', (e) => {
-    if (e.target === editorOverlay) exitEditMode();
-  });
-
-  document.body.appendChild(editorOverlay);
-
-  // Focus and auto-resize
+export function startInlineEdit(taskId, cursorMode = 'end') {
+  editingTaskId = taskId;
+  pendingCursorMode = cursorMode;
+  render(true); // force past the isEditing guard so the input appears
   requestAnimationFrame(() => {
-    textarea.focus();
-    textarea.style.height = textarea.scrollHeight + 'px';
-    editorOverlay.classList.add('visible');
+    const input = document.querySelector('.task-inline-input');
+    if (!input) return;
+    input.focus();
+    const len = input.value.length;
+    const pos = cursorMode === 'start' ? 0 : len;
+    input.setSelectionRange(pos, pos);
   });
 }
 
-export function exitEditMode() {
-  if (!editorOverlay) return;
-
-  const textarea = editorOverlay.querySelector('.editor-textarea');
-  if (textarea) {
-    const lines = textarea.value
-      .split('\n')
-      .map(l => l.trim())
-      .filter(l => l.length > 0);
-
-    replaceColumnTasks(currentParentId, lines);
+export function stopInlineEdit() {
+  if (!editingTaskId) return;
+  const input = document.querySelector('.task-inline-input');
+  const rawValue = input ? input.value : null;
+  const id = editingTaskId;
+  editingTaskId = null;
+  if (rawValue !== null) {
+    const { cleanText, date } = extractDateFromText(rawValue);
+    const finalText = cleanText.trim() || 'Untitled';
+    updateTaskText(id, finalText);   // emit() triggers subscribed render()
+    if (date !== undefined) setTaskDate(id, date);
+  } else {
+    render(); // no mutation; manually re-render to remove input
   }
+}
 
-  editorOverlay.classList.remove('visible');
-  setTimeout(() => {
-    if (editorOverlay && editorOverlay.parentNode) {
-      editorOverlay.parentNode.removeChild(editorOverlay);
-    }
-    editorOverlay = null;
-    currentEditColumn = null;
-    currentParentId = null;
-    renderColumns();
-  }, 200);
+export function cancelInlineEdit() {
+  editingTaskId = null;
+  render(); // isEditing() is now false, passes guard normally
 }

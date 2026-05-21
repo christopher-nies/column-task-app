@@ -27,17 +27,13 @@ async function init() {
       <div class="header-right">
       <div class="app-shortcuts-hint">
         <div class="shortcut-group">
-          <span class="shortcut-key">↑↓</span>
+          <span class="shortcut-key">j/k</span>
           <span class="shortcut-label">nav</span>
         </div>
         <div class="header-divider"></div>
         <div class="shortcut-group">
-          <span class="shortcut-key">→</span>
+          <span class="shortcut-key">h/l</span>
           <span class="shortcut-label">drill</span>
-        </div>
-        <div class="shortcut-group">
-          <span class="shortcut-key">←</span>
-          <span class="shortcut-label">back</span>
         </div>
         <div class="header-divider"></div>
         <div class="shortcut-group">
@@ -45,16 +41,16 @@ async function init() {
           <span class="shortcut-label">done</span>
         </div>
         <div class="shortcut-group">
-          <span class="shortcut-key">E</span>
+          <span class="shortcut-key">i/a</span>
           <span class="shortcut-label">edit</span>
         </div>
         <div class="shortcut-group">
-          <span class="shortcut-key">N</span>
+          <span class="shortcut-key">o/O</span>
           <span class="shortcut-label">new</span>
         </div>
         <div class="shortcut-group">
-          <span class="shortcut-key">D</span>
-          <span class="shortcut-label">date</span>
+          <span class="shortcut-key">dd</span>
+          <span class="shortcut-label">del</span>
         </div>
       </div>
       <div class="header-divider"></div>

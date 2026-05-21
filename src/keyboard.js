@@ -1,4 +1,4 @@
-// keyboard.js — Global keyboard shortcut handler
+// keyboard.js — Global keyboard shortcut handler (Vim-style)
 
 import {
   moveFocusUp,
@@ -7,19 +7,21 @@ import {
   drillOut,
   toggleFocusedDone,
   deleteFocusedTask,
-  addTaskToFocusedColumn,
   getFocusedColumn,
+  getFocusedIndex,
   getFocusedTaskId,
-  render
+  setFocusedIndex
 } from './columns.js';
 
-import { enterEditMode, isEditing } from './editor.js';
-import { getSelectedPath, moveTask, getColumnTasks, setTaskDate } from './store.js';
-import { getFocusedIndex } from './columns.js';
-import { parseNaturalDate } from './dates.js';
+import { isEditing, startInlineEdit } from './editor.js';
+import { getSelectedPath, moveTask, getColumnTasks, addTask } from './store.js';
 import { isSettingsOpen, closeSettings } from './settings.js';
 import { openImportExport, closeImportExport, isImportExportOpen } from './importExport.js';
 import { printTasks } from './print.js';
+
+// dd state — two d-presses within 600ms triggers delete
+let dPending = false;
+let dTimer = null;
 
 export function initKeyboard() {
   document.addEventListener('keydown', handleKeyDown);
@@ -40,7 +42,7 @@ function handleKeyDown(e) {
     return;
   }
 
-  // Don't handle if we're in edit mode or an input is focused
+  // Let the inline input's own keydown handler take over while editing
   if (isEditing()) return;
   if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
 
@@ -48,10 +50,11 @@ function handleKeyDown(e) {
   const idx = getFocusedIndex();
 
   switch (e.key) {
+    // ── Navigation ────────────────────────────────────────
+    case 'k':
     case 'ArrowUp':
       e.preventDefault();
       if (e.ctrlKey || e.metaKey) {
-        // Reorder task up
         const tasks = getColumnTasks(col);
         if (tasks[idx]) moveTask(tasks[idx].id, -1);
       } else {
@@ -59,10 +62,10 @@ function handleKeyDown(e) {
       }
       break;
 
+    case 'j':
     case 'ArrowDown':
       e.preventDefault();
       if (e.ctrlKey || e.metaKey) {
-        // Reorder task down
         const tasks = getColumnTasks(col);
         if (tasks[idx]) moveTask(tasks[idx].id, 1);
       } else {
@@ -70,66 +73,78 @@ function handleKeyDown(e) {
       }
       break;
 
+    case 'l':
     case 'ArrowRight':
+    case 'Enter':
       e.preventDefault();
       drillIn();
       break;
 
+    case 'h':
     case 'ArrowLeft':
     case 'Backspace':
       e.preventDefault();
       drillOut();
       break;
 
-    case 'Enter':
-      e.preventDefault();
-      drillIn();
-      break;
-
+    // ── Done toggle ───────────────────────────────────────
     case ' ':
       e.preventDefault();
       toggleFocusedDone();
       break;
 
-    case 'e':
-    case 'E':
+    // ── Inline edit ───────────────────────────────────────
+    case 'i': {
       e.preventDefault();
-      const path = getSelectedPath();
-      const parentId = col > 0 ? path[col - 1] : null;
-      enterEditMode(col, parentId);
-      break;
-
-    case 'n':
-    case 'N':
-      e.preventDefault();
-      addTaskToFocusedColumn();
-      break;
-
-    case 'd':
-    case 'D': {
-      e.preventDefault();
-      // isEditing() and input-focus are already guarded at the top of the handler.
       const taskId = getFocusedTaskId();
-      if (!taskId) break;
-      const input = window.prompt('Set date (e.g. tod, tom, mon, 2026-05-25):');
-      if (input === null) break;          // user cancelled — leave the date untouched
-      if (input.trim() === '') {
-        setTaskDate(taskId, null);        // empty input clears the date
-        break;
-      }
-      const parsed = parseNaturalDate(input);
-      if (parsed) {
-        setTaskDate(taskId, parsed);
-      } else {
-        window.alert('Unrecognized date format');
-      }
+      if (taskId) startInlineEdit(taskId, 'start');
       break;
     }
 
-    case 'Delete':
+    case 'a': {
       e.preventDefault();
-      deleteFocusedTask();
+      const taskId = getFocusedTaskId();
+      if (taskId) startInlineEdit(taskId, 'end');
       break;
+    }
+
+    // ── New task + immediate edit ─────────────────────────
+    case 'o': {
+      if (e.ctrlKey || e.metaKey) break;
+      e.preventDefault();
+      const path = getSelectedPath();
+      const parentId = col > 0 ? path[col - 1] : null;
+      const insertIndex = idx + 1;
+      const node = addTask(parentId, '', insertIndex);
+      setFocusedIndex(insertIndex);
+      startInlineEdit(node.id, 'start');
+      break;
+    }
+
+    case 'O': {
+      e.preventDefault();
+      const path = getSelectedPath();
+      const parentId = col > 0 ? path[col - 1] : null;
+      const node = addTask(parentId, '', idx);
+      // focusedIndex stays at idx — the new task landed there
+      startInlineEdit(node.id, 'start');
+      break;
+    }
+
+    // ── Delete (dd — double press within 600ms) ───────────
+    case 'd': {
+      e.preventDefault();
+      if (dPending) {
+        clearTimeout(dTimer);
+        dPending = false;
+        dTimer = null;
+        deleteFocusedTask();
+      } else {
+        dPending = true;
+        dTimer = setTimeout(() => { dPending = false; dTimer = null; }, 600);
+      }
+      break;
+    }
 
     default:
       // Ctrl/Cmd+M — open import/export

@@ -142,20 +142,24 @@ Defined in `keyboard.js`. These are the full set of shortcuts:
 
 | Key | Action | Handler |
 |---|---|---|
-| `↑` | Move focus up within column | `moveFocusUp()` |
-| `↓` | Move focus down within column | `moveFocusDown()` |
-| `→` or `Enter` | Drill into selected task (open children) | `drillIn()` |
-| `←` or `Backspace` | Go back to parent column | `drillOut()` |
+| `j` / `↓` | Move focus down | `moveFocusDown()` |
+| `k` / `↑` | Move focus up | `moveFocusUp()` |
+| `l` / `→` / `Enter` | Drill into selected task | `drillIn()` |
+| `h` / `←` / `Backspace` | Go back to parent column | `drillOut()` |
 | `Space` | Toggle done on focused task | `toggleFocusedDone()` |
-| `E` | Enter edit mode on focused column | `enterEditMode(col, parentId)` |
-| `Escape` | Exit edit mode (saves changes) | `exitEditMode()` |
-| `N` | Add new task in focused column | `addTaskToFocusedColumn()` |
-| `D` | Set/clear date on focused task | `setTaskDate()` |
-| `Delete` | Delete focused task and its subtree | `deleteFocusedTask()` |
-| `Ctrl+↑` | Reorder focused task upward | `moveTask(id, -1)` |
-| `Ctrl+↓` | Reorder focused task downward | `moveTask(id, 1)` |
+| `i` | Edit focused task (cursor at start) | `startInlineEdit(id, 'start')` |
+| `a` | Edit focused task (cursor at end) | `startInlineEdit(id, 'end')` |
+| `o` | New task below focused + edit | `addTask` + `startInlineEdit` |
+| `O` | New task above focused + edit | `addTask` + `startInlineEdit` |
+| `dd` | Delete focused task (double-press) | `deleteFocusedTask()` |
+| `Enter` / `Escape` | Save inline edit | `stopInlineEdit()` |
+| `Escape` | Cancel inline edit (no change) | `cancelInlineEdit()` |
+| `Ctrl+k` / `Ctrl+↑` | Reorder focused task upward | `moveTask(id, -1)` |
+| `Ctrl+j` / `Ctrl+↓` | Reorder focused task downward | `moveTask(id, 1)` |
 
-Keyboard handler is blocked entirely when `isEditing()` returns true, or when an `<input>` / `<textarea>` is focused.
+Keyboard handler is blocked when `isEditing()` returns true. The inline input captures Enter/Escape and stops propagation.
+
+Dates are set by typing `@TOKEN` directly in task text during `i`/`a`/`o`/`O` edit. Supported tokens: `@tod`, `@tom`, `@mon`–`@sun`, `@next mon`–`@next sun`, `@YYYY-MM-DD`, `@clear`. The token is stripped from the task text on save and the date is set separately.
 
 ---
 
