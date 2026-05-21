@@ -25,8 +25,9 @@ import { getSettings } from './settings.js';
 import { parseNaturalDate, formatDateLabel, getTodayISO } from './dates.js';
 
 let columnsContainer = null;
-let filterBar = null;     // stable filter-bar element, created once
-let mobileBar = null;     // stable mobile action bar, created once
+let filterBar = null;      // stable filter-bar element, created once
+let breadcrumbBar = null;  // stable breadcrumb bar, created once
+let mobileBar = null;      // stable mobile action bar, created once
 let activeFilter = 'all'; // 'all' | 'today' | 'week'
 let focusedColumn = 0;
 let focusedIndex = 0;
@@ -49,7 +50,16 @@ export function setFocusedIndex(i) { focusedIndex = i; }
 export function initColumns(container) {
   columnsContainer = container;
   buildFilterBar();
+  buildBreadcrumbBar();
   buildMobileBar();
+}
+
+function buildBreadcrumbBar() {
+  if (breadcrumbBar) return;
+  breadcrumbBar = document.createElement('nav');
+  breadcrumbBar.className = 'breadcrumb-bar';
+  breadcrumbBar.setAttribute('aria-label', 'Task hierarchy');
+  columnsContainer.parentNode.insertBefore(breadcrumbBar, columnsContainer);
 }
 
 function buildMobileBar() {
@@ -208,7 +218,8 @@ export function render(force = false) {
     }
   });
 
-  // Update focus indicator
+  // Update breadcrumb and focus
+  updateBreadcrumb();
   updateFocusIndicator();
 
   // Animate progress rings from previous state
@@ -254,6 +265,7 @@ function renderFilterView() {
 
   columnsContainer.innerHTML = '';
   columnsContainer.appendChild(view);
+  updateBreadcrumb();
 }
 
 function createTaskElement(task, columnIndex, itemIndex, selectedId) {
@@ -538,6 +550,55 @@ function getParentForColumn(col, path) {
     return null;
   }
   return find(root, path[col - 1]);
+}
+
+function updateBreadcrumb() {
+  if (!breadcrumbBar) return;
+
+  const { selectedPath } = getState();
+
+  // Build segments: root + one entry per item in the path
+  const segments = [{ label: 'Tasks', level: 0 }];
+  for (let i = 0; i < selectedPath.length; i++) {
+    const tasks = getColumnTasks(i);
+    const task = tasks.find(t => t.id === selectedPath[i]);
+    if (task) segments.push({ label: task.text, level: i + 1 });
+  }
+
+  // On desktop hide when at root; always visible on mobile
+  const atRoot = segments.length === 1;
+  breadcrumbBar.classList.toggle('breadcrumb-bar--hidden', atRoot && !isTouchDevice());
+
+  breadcrumbBar.innerHTML = '';
+
+  segments.forEach((seg, i) => {
+    if (i > 0) {
+      const sep = document.createElement('span');
+      sep.className = 'breadcrumb-sep';
+      sep.setAttribute('aria-hidden', 'true');
+      sep.textContent = '›';
+      breadcrumbBar.appendChild(sep);
+    }
+
+    const isLast = i === segments.length - 1;
+    const el = document.createElement(isLast ? 'span' : 'button');
+    el.className = 'breadcrumb-item' + (isLast ? ' breadcrumb-item--current' : '');
+    el.textContent = seg.label;
+    if (!isLast) el.addEventListener('click', () => navigateToLevel(seg.level));
+    breadcrumbBar.appendChild(el);
+  });
+}
+
+function navigateToLevel(targetCol) {
+  const path = getSelectedPath();
+  // Remember which task was selected at targetCol so we can restore focus index
+  const selectedAtTarget = path[targetCol];
+  const tasks = getColumnTasks(targetCol);
+  const idx = selectedAtTarget ? tasks.findIndex(t => t.id === selectedAtTarget) : 0;
+
+  focusedColumn = targetCol;
+  focusedIndex = idx >= 0 ? idx : 0;
+  deselectColumn(targetCol); // mutates store → emit() → subscribed render()
 }
 
 function updateFocusIndicator() {
