@@ -26,11 +26,16 @@ import { parseNaturalDate, formatDateLabel, getTodayISO } from './dates.js';
 
 let columnsContainer = null;
 let filterBar = null;     // stable filter-bar element, created once
+let mobileBar = null;     // stable mobile action bar, created once
 let activeFilter = 'all'; // 'all' | 'today' | 'week'
 let focusedColumn = 0;
 let focusedIndex = 0;
 let dragState = null;     // { taskId, columnIndex, itemIndex }
 let justDroppedId = null; // task id that just landed, cleared after animation
+
+// Double-tap tracking for mobile edit
+let lastTapId = null;
+let lastTapTime = 0;
 
 // Track previous ring state so we can animate from old → new values
 // Map<taskId, { offset: number, percent: number, remaining: number }>
@@ -44,6 +49,14 @@ export function setFocusedIndex(i) { focusedIndex = i; }
 export function initColumns(container) {
   columnsContainer = container;
   buildFilterBar();
+  buildMobileBar();
+}
+
+function buildMobileBar() {
+  if (mobileBar) return;
+  mobileBar = document.createElement('div');
+  mobileBar.className = 'mobile-bar mobile-bar--hidden';
+  document.body.appendChild(mobileBar);
 }
 
 // Build the filter bar once and insert it directly above the columns
@@ -359,8 +372,17 @@ function createTaskElement(task, columnIndex, itemIndex, selectedId) {
     item.appendChild(chevron);
   }
 
-  // Click handler
+  // Click handler — double-tap on atomic task opens inline edit on mobile
   item.addEventListener('click', () => {
+    const now = Date.now();
+    if (isTouchDevice() && !group && lastTapId === task.id && now - lastTapTime < 500) {
+      lastTapId = null;
+      startInlineEdit(task.id, 'end');
+      return;
+    }
+    lastTapId = task.id;
+    lastTapTime = now;
+
     focusedColumn = columnIndex;
     focusedIndex = itemIndex;
     selectTask(task.id, columnIndex);
@@ -530,6 +552,63 @@ function updateFocusIndicator() {
       item.classList.remove('focused');
     }
   });
+  updateMobileBar();
+}
+
+function isTouchDevice() {
+  return window.matchMedia('(hover: none) and (pointer: coarse)').matches;
+}
+
+function updateMobileBar() {
+  if (!mobileBar) return;
+
+  // Hide while keyboard editing is active (the inline input handles everything)
+  if (isEditing()) { mobileBar.classList.add('mobile-bar--hidden'); return; }
+  if (!isTouchDevice()) { mobileBar.classList.add('mobile-bar--hidden'); return; }
+
+  const tasks = getColumnTasks(focusedColumn);
+  const task = tasks[focusedIndex];
+  if (!task) { mobileBar.classList.add('mobile-bar--hidden'); return; }
+
+  mobileBar.classList.remove('mobile-bar--hidden');
+
+  const group = isTaskGroup(task);
+  const canBack = focusedColumn > 0;
+
+  mobileBar.innerHTML = `
+    <button class="mobile-action-btn" data-action="back" ${canBack ? '' : 'disabled'}>
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+      <span>Back</span>
+    </button>
+    <button class="mobile-action-btn" data-action="edit">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+      <span>Edit</span>
+    </button>
+    <button class="mobile-action-btn ${task.done ? 'mobile-action-btn--done' : ''}" data-action="done">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+      <span>${task.done ? 'Undo' : 'Done'}</span>
+    </button>
+    <button class="mobile-action-btn" data-action="new">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      <span>New</span>
+    </button>
+    <button class="mobile-action-btn mobile-action-btn--danger" data-action="delete">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+      <span>Delete</span>
+    </button>
+  `;
+
+  mobileBar.querySelector('[data-action="back"]').addEventListener('click', () => drillOut());
+  mobileBar.querySelector('[data-action="edit"]').addEventListener('click', () => startInlineEdit(task.id, 'end'));
+  mobileBar.querySelector('[data-action="done"]').addEventListener('click', () => toggleFocusedDone());
+  mobileBar.querySelector('[data-action="new"]').addEventListener('click', () => {
+    const path = getSelectedPath();
+    const parentId = focusedColumn > 0 ? path[focusedColumn - 1] : null;
+    const node = addTask(parentId, '', focusedIndex + 1);
+    setFocusedIndex(focusedIndex + 1);
+    startInlineEdit(node.id, 'start');
+  });
+  mobileBar.querySelector('[data-action="delete"]').addEventListener('click', () => deleteFocusedTask());
 }
 
 function animateProgressRings() {

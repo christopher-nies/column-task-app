@@ -1331,3 +1331,110 @@ body {
 .task-item.focused .progress-ring-fill {
   filter: drop-shadow(0 0 3px var(--color-accent-glow));
 }
+
+/* ─── Mobile Action Bar ──────────────────────────────── */
+
+.mobile-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  padding: 6px 8px;
+  padding-bottom: calc(6px + env(safe-area-inset-bottom, 0px));
+  background: var(--bg-column-header);
+  border-top: 1px solid var(--border-column);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  z-index: 60;
+  transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.mobile-bar--hidden {
+  transform: translateY(100%);
+}
+
+/* Only show on genuine touch devices */
+@media (hover: hover) {
+  .mobile-bar { display: none; }
+}
+
+.mobile-action-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 6px 14px;
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-md);
+  color: var(--color-text-muted);
+  cursor: pointer;
+  font-size: 10px;
+  font-family: var(--font-mono);
+  letter-spacing: 0.03em;
+  min-width: 52px;
+  min-height: 48px;
+  transition: all var(--transition-fast);
+}
+
+.mobile-action-btn:active {
+  background: var(--bg-task-hover);
+  color: var(--color-text);
+  transform: scale(0.92);
+}
+
+.mobile-action-btn[disabled] {
+  opacity: 0.25;
+  pointer-events: none;
+}
+
+.mobile-action-btn--done {
+  color: var(--color-accent);
+}
+
+.mobile-action-btn--danger:active {
+  color: #e05252;
+}
+
+/* ─── Mobile column layout ───────────────────────────── */
+
+@media (hover: none) and (pointer: coarse) {
+  /* Reserve space at bottom for action bar */
+  .column {
+    max-height: calc(100vh - 148px);
+  }
+
+  /* Full-width snap scrolling: one column at a time */
+  .columns-container {
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+    padding: 10px;
+    gap: 10px;
+    /* Hide scrollbar on mobile */
+    scrollbar-width: none;
+  }
+
+  .columns-container::-webkit-scrollbar {
+    display: none;
+  }
+
+  .column {
+    min-width: calc(100vw - 48px);
+    max-width: calc(100vw - 48px);
+    scroll-snap-align: start;
+  }
+
+  /* Larger touch targets for task items */
+  .task-item {
+    padding: 11px 14px;
+    min-height: 44px;
+  }
+
+  .task-checkbox {
+    width: 22px;
+    height: 22px;
+  }
+}
