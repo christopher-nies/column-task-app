@@ -611,8 +611,16 @@ function navigateToLevel(targetCol) {
 
   focusedColumn = targetCol;
   focusedIndex = idx >= 0 ? idx : 0;
-  if (isTouchDevice()) pendingSlideBack = true;
-  deselectColumn(targetCol); // mutates store → emit() → subscribed render() (flag consumed there)
+
+  if (isTouchDevice() && columnsContainer) {
+    // Scroll the existing DOM to the target column first, then update state.
+    // The DOM teardown happens after the animation lands so the transition is seamless.
+    const targetEl = columnsContainer.querySelector(`.column[data-column-index="${targetCol}"]`);
+    const targetLeft = targetEl ? targetEl.offsetLeft - columnsContainer.offsetLeft : 0;
+    easeScrollTo(columnsContainer, targetLeft, 320, () => deselectColumn(targetCol));
+  } else {
+    deselectColumn(targetCol);
+  }
 }
 
 function updateFocusIndicator() {
@@ -783,11 +791,12 @@ function animateProgressRings() {
 
 // Scroll `el` horizontally to `targetLeft` with a cubic ease-out curve.
 // Disables scroll-snap during the tween so the browser doesn't snap each
-// intermediate scrollLeft assignment to a column boundary (which kills animation).
-function easeScrollTo(el, targetLeft, duration = 340) {
+// intermediate scrollLeft write to a column boundary (which collapses the animation).
+// Calls onComplete (if provided) when the tween finishes.
+function easeScrollTo(el, targetLeft, duration = 340, onComplete = null) {
   const startLeft = el.scrollLeft;
   const delta = targetLeft - startLeft;
-  if (Math.abs(delta) < 1) return;
+  if (Math.abs(delta) < 1) { onComplete?.(); return; }
   const startTime = performance.now();
   const easeOutCubic = t => 1 - Math.pow(1 - t, 3);
   el.style.scrollSnapType = 'none';
@@ -798,6 +807,7 @@ function easeScrollTo(el, targetLeft, duration = 340) {
       requestAnimationFrame(step);
     } else {
       el.style.scrollSnapType = '';
+      onComplete?.();
     }
   }
   requestAnimationFrame(step);
