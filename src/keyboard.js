@@ -7,6 +7,7 @@ import {
   drillOut,
   toggleFocusedDone,
   deleteFocusedTask,
+  addChildToFocused,
   getFocusedColumn,
   getFocusedIndex,
   getFocusedTaskId,
@@ -105,6 +106,13 @@ function handleKeyDown(e) {
       e.preventDefault();
       const taskId = getFocusedTaskId();
       if (taskId) startInlineEdit(taskId, 'end');
+      break;
+    }
+
+    // ── Add child (subtask) ───────────────────────────────
+    case 'Tab': {
+      e.preventDefault();
+      addChildToFocused();
       break;
     }
 

@@ -649,9 +649,13 @@ function updateMobileBar() {
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
       <span>${task.done ? 'Undo' : 'Done'}</span>
     </button>
-    <button class="mobile-action-btn" data-action="new">
+    <button class="mobile-action-btn" data-action="new-sibling" title="Add task below (same level)">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-      <span>New</span>
+      <span>Below</span>
+    </button>
+    <button class="mobile-action-btn" data-action="new-child" title="Add subtask (child)">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/><line x1="5" y1="12" x2="15" y2="12"/></svg>
+      <span>Sub</span>
     </button>
     <button class="mobile-action-btn mobile-action-btn--danger" data-action="delete">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
@@ -662,13 +666,14 @@ function updateMobileBar() {
   mobileBar.querySelector('[data-action="back"]').addEventListener('click', () => drillOut());
   mobileBar.querySelector('[data-action="edit"]').addEventListener('click', () => startInlineEdit(task.id, 'end'));
   mobileBar.querySelector('[data-action="done"]').addEventListener('click', () => toggleFocusedDone());
-  mobileBar.querySelector('[data-action="new"]').addEventListener('click', () => {
+  mobileBar.querySelector('[data-action="new-sibling"]').addEventListener('click', () => {
     const path = getSelectedPath();
     const parentId = focusedColumn > 0 ? path[focusedColumn - 1] : null;
     const node = addTask(parentId, '', focusedIndex + 1);
     setFocusedIndex(focusedIndex + 1);
     startInlineEdit(node.id, 'start');
   });
+  mobileBar.querySelector('[data-action="new-child"]').addEventListener('click', () => addChildToFocused());
   mobileBar.querySelector('[data-action="delete"]').addEventListener('click', () => deleteFocusedTask());
 }
 
@@ -803,6 +808,20 @@ export function drillIn() {
     focusedIndex = 0;
     render();
   }
+}
+
+// Add a child task to the focused task, drill in, and open inline edit.
+// Works whether the task already has children or is currently a leaf.
+export function addChildToFocused() {
+  const tasks = getColumnTasks(focusedColumn);
+  const task = tasks[focusedIndex];
+  if (!task) return;
+
+  const node = addTask(task.id, '', -1); // append as last child
+  selectTask(task.id, focusedColumn);    // expand the column; emits → render
+  focusedColumn++;
+  focusedIndex = getColumnTasks(focusedColumn).length - 1; // last child
+  startInlineEdit(node.id, 'start');
 }
 
 export function drillOut() {

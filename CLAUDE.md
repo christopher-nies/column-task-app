@@ -151,6 +151,7 @@ Defined in `keyboard.js`. These are the full set of shortcuts:
 | `a` | Edit focused task (cursor at end) | `startInlineEdit(id, 'end')` |
 | `o` | New task below focused + edit | `addTask` + `startInlineEdit` |
 | `O` | New task above focused + edit | `addTask` + `startInlineEdit` |
+| `Tab` | Add subtask to focused task + edit | `addChildToFocused()` |
 | `dd` | Delete focused task (double-press) | `deleteFocusedTask()` |
 | `Enter` / `Escape` | Save inline edit | `stopInlineEdit()` |
 | `Escape` | Cancel inline edit (no change) | `cancelInlineEdit()` |
