@@ -14,14 +14,19 @@ import {
   getState,
   getSelectedPath,
   updateTaskText,
-  reorderTask
+  reorderTask,
+  getTasksWithDate,
+  setTaskDate
 } from './store.js';
 
 import { enterEditMode, isEditing } from './editor.js';
 import { playCompleteAnimation } from './animations.js';
 import { getSettings } from './settings.js';
+import { formatDateLabel, getTodayISO } from './dates.js';
 
 let columnsContainer = null;
+let filterBar = null;     // stable filter-bar element, created once
+let activeFilter = 'all'; // 'all' | 'today' | 'week'
 let focusedColumn = 0;
 let focusedIndex = 0;
 let dragState = null;     // { taskId, columnIndex, itemIndex }
@@ -38,10 +43,73 @@ export function setFocusedIndex(i) { focusedIndex = i; }
 
 export function initColumns(container) {
   columnsContainer = container;
+  buildFilterBar();
+}
+
+// Build the filter bar once and insert it directly above the columns
+// container. It lives outside #columns-container so it survives render()'s
+// full teardown of the container's innerHTML.
+function buildFilterBar() {
+  if (filterBar) return;
+  filterBar = document.createElement('div');
+  filterBar.className = 'filter-bar';
+
+  const filters = [
+    { id: 'all', label: 'All' },
+    { id: 'today', label: 'Today' },
+    { id: 'week', label: 'This Week' }
+  ];
+
+  for (const { id, label } of filters) {
+    const btn = document.createElement('button');
+    btn.className = 'filter-btn' + (id === activeFilter ? ' active' : '');
+    btn.dataset.filter = id;
+    btn.textContent = label;
+    btn.addEventListener('click', () => setActiveFilter(id));
+    filterBar.appendChild(btn);
+  }
+
+  columnsContainer.parentNode.insertBefore(filterBar, columnsContainer);
+}
+
+// Switch the active filter, refresh button states, and re-render.
+function setActiveFilter(filter) {
+  if (filter === activeFilter) return;
+  activeFilter = filter;
+  if (filterBar) {
+    filterBar.querySelectorAll('.filter-btn').forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.filter === filter);
+    });
+  }
+  render();
+}
+
+// Classify a task date relative to today for badge styling.
+// Returns 'overdue' | 'today' | 'future'.
+function classifyDate(iso) {
+  const today = getTodayISO();
+  if (iso < today) return 'overdue';
+  if (iso === today) return 'today';
+  return 'future';
+}
+
+// Build a date-badge <span> for a task date, or null when the task has none.
+function createDateBadge(iso) {
+  if (!iso) return null;
+  const badge = document.createElement('span');
+  badge.className = `date-badge date-badge--${classifyDate(iso)}`;
+  badge.textContent = formatDateLabel(iso);
+  return badge;
 }
 
 export function render() {
   if (!columnsContainer || isEditing()) return;
+
+  // Filtered views replace the normal column layout entirely.
+  if (activeFilter !== 'all') {
+    renderFilterView();
+    return;
+  }
 
   const state = getState();
   const path = state.selectedPath;
@@ -156,6 +224,47 @@ export function render() {
   animateProgressRings();
 }
 
+// Render the flat, breadcrumb-based list for an active 'today' / 'week' filter.
+function renderFilterView() {
+  const items = getTasksWithDate(activeFilter);
+
+  const view = document.createElement('div');
+  view.className = 'filter-view';
+
+  if (items.length === 0) {
+    const empty = document.createElement('div');
+    empty.className = 'empty-column';
+    const label = activeFilter === 'today' ? 'today' : 'this week';
+    empty.innerHTML = `<span class="empty-column-text">no tasks due ${label}</span>`;
+    view.appendChild(empty);
+  } else {
+    for (const { task, path } of items) {
+      const row = document.createElement('div');
+      row.className = 'filter-item';
+
+      const breadcrumb = document.createElement('span');
+      breadcrumb.className = 'filter-breadcrumb';
+      // path is an array of ancestor task-text strings; '›' separates them.
+      breadcrumb.textContent = path.length > 0 ? path.join(' › ') : '—';
+      row.appendChild(breadcrumb);
+
+      const text = document.createElement('span');
+      text.className = 'filter-task-text';
+      text.textContent = task.text;
+      if (task.done) text.classList.add('done');
+      row.appendChild(text);
+
+      const badge = createDateBadge(task.date);
+      if (badge) row.appendChild(badge);
+
+      view.appendChild(row);
+    }
+  }
+
+  columnsContainer.innerHTML = '';
+  columnsContainer.appendChild(view);
+}
+
 function createTaskElement(task, columnIndex, itemIndex, selectedId) {
   const item = document.createElement('div');
   item.className = 'task-item';
@@ -215,6 +324,10 @@ function createTaskElement(task, columnIndex, itemIndex, selectedId) {
   text.className = 'task-text';
   text.textContent = task.text;
   item.appendChild(text);
+
+  // Date badge — shown only when the task has a scheduled date.
+  const badge = createDateBadge(task.date);
+  if (badge) item.appendChild(badge);
 
   // Chevron for groups
   if (group) {
@@ -494,6 +607,13 @@ function escapeHtml(str) {
 }
 
 // ─── Keyboard helpers ─────────────────────────────────────
+
+// The id of the currently focused task, or null when nothing is focused.
+export function getFocusedTaskId() {
+  const tasks = getColumnTasks(focusedColumn);
+  const task = tasks[focusedIndex];
+  return task ? task.id : null;
+}
 
 export function moveFocusUp() {
   if (focusedIndex > 0) {

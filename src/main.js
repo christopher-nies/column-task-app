@@ -52,6 +52,10 @@ async function init() {
           <span class="shortcut-key">N</span>
           <span class="shortcut-label">new</span>
         </div>
+        <div class="shortcut-group">
+          <span class="shortcut-key">D</span>
+          <span class="shortcut-label">date</span>
+        </div>
       </div>
       <div class="header-divider"></div>
       <button class="print-btn" title="Print task cards (Ctrl+Shift+P)" id="print-btn">

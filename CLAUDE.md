@@ -8,7 +8,7 @@ This file is the onboarding guide for any AI agent working on this codebase. Rea
 
 A keyboard-first, column-based task manager inspired by [Colonnes](https://www.colonnes.com/).
 
-The core idea: instead of showing an overwhelming tree of tasks, show only the **current path** as side-by-side columns — like macOS Finder. Selecting a task group reveals its children in the next column to the right. Tasks are broken down until they are truly **atomic** (leaf nodes with a checkbox). No dates, no tags, no priorities. Less metadata → more action.
+The core idea: instead of showing an overwhelming tree of tasks, show only the **current path** as side-by-side columns — like macOS Finder. Selecting a task group reveals its children in the next column to the right. Tasks are broken down until they are truly **atomic** (leaf nodes with a checkbox). Tasks support an optional date for scheduling. No tags, priorities, or assignees. Less metadata → more action.
 
 ---
 
@@ -18,7 +18,7 @@ These are invariants. Do not violate them.
 
 | Principle | Rule |
 |---|---|
-| **No metadata** | Tasks have only `text`, `done`, and `children`. No dates, tags, priorities, reminders, or assignees. |
+| **Minimal metadata** | Tasks support an optional `date` field (ISO string) for scheduling. All other metadata (tags, priorities, assignees) remains out of scope. |
 | **Atomic tasks are leaf nodes** | A task with `children.length > 0` is a **task group** and gets a progress ring. A task with no children is an **atomic task** and gets a checkbox. Never mix these. |
 | **Keyboard-first** | Every action that exists must remain reachable by keyboard. Mouse is secondary. |
 | **No framework** | Vanilla JS ES modules only. No React, Vue, Svelte, or any UI framework. No component libraries. |
@@ -150,6 +150,7 @@ Defined in `keyboard.js`. These are the full set of shortcuts:
 | `E` | Enter edit mode on focused column | `enterEditMode(col, parentId)` |
 | `Escape` | Exit edit mode (saves changes) | `exitEditMode()` |
 | `N` | Add new task in focused column | `addTaskToFocusedColumn()` |
+| `D` | Set/clear date on focused task | `setTaskDate()` |
 | `Delete` | Delete focused task and its subtree | `deleteFocusedTask()` |
 | `Ctrl+↑` | Reorder focused task upward | `moveTask(id, -1)` |
 | `Ctrl+↓` | Reorder focused task downward | `moveTask(id, 1)` |

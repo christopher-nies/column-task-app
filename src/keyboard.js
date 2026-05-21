@@ -9,12 +9,14 @@ import {
   deleteFocusedTask,
   addTaskToFocusedColumn,
   getFocusedColumn,
+  getFocusedTaskId,
   render
 } from './columns.js';
 
 import { enterEditMode, isEditing } from './editor.js';
-import { getSelectedPath, moveTask, getColumnTasks } from './store.js';
+import { getSelectedPath, moveTask, getColumnTasks, setTaskDate } from './store.js';
 import { getFocusedIndex } from './columns.js';
+import { parseNaturalDate } from './dates.js';
 import { isSettingsOpen, closeSettings } from './settings.js';
 import { openImportExport, closeImportExport, isImportExportOpen } from './importExport.js';
 import { printTasks } from './print.js';
@@ -102,6 +104,27 @@ function handleKeyDown(e) {
       e.preventDefault();
       addTaskToFocusedColumn();
       break;
+
+    case 'd':
+    case 'D': {
+      e.preventDefault();
+      // isEditing() and input-focus are already guarded at the top of the handler.
+      const taskId = getFocusedTaskId();
+      if (!taskId) break;
+      const input = window.prompt('Set date (e.g. tod, tom, mon, 2026-05-25):');
+      if (input === null) break;          // user cancelled — leave the date untouched
+      if (input.trim() === '') {
+        setTaskDate(taskId, null);        // empty input clears the date
+        break;
+      }
+      const parsed = parseNaturalDate(input);
+      if (parsed) {
+        setTaskDate(taskId, parsed);
+      } else {
+        window.alert('Unrecognized date format');
+      }
+      break;
+    }
 
     case 'Delete':
       e.preventDefault();

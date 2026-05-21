@@ -1,5 +1,7 @@
 // store.js — Recursive task tree with REST API persistence (SQLite backend)
 
+import { getTodayISO, getWeekRange } from './dates.js';
+
 const API_BASE = '/api';
 
 let state = {
@@ -22,8 +24,21 @@ function createNode(text) {
     id: generateId(),
     text: text.trim(),
     done: false,
+    date: null,
     children: []
   };
+}
+
+// Ensure every node in a tree has a defined `date` field. Tasks persisted
+// before the date feature shipped lack the field entirely; this normalizes
+// them on load so `node.date` is always present (null when unset).
+function normalizeDates(nodes) {
+  for (const node of nodes) {
+    node.date = node.date ?? null;
+    if (node.children && node.children.length > 0) {
+      normalizeDates(node.children);
+    }
+  }
 }
 
 function findNode(nodes, id) {
@@ -184,6 +199,48 @@ export function updateTaskText(id, text) {
   }
 }
 
+// Set (or clear) the scheduled date on a task.
+// `dateStr` must be a 'YYYY-MM-DD' string, or null to clear the date.
+export function setTaskDate(id, dateStr) {
+  const node = findNode(state.root, id);
+  if (!node) return;
+  node.date = dateStr ?? null;
+  emit();
+}
+
+// Recursively collect every task carrying a date that matches `filter`.
+// Returns a flat array of { task, path } where `path` is the breadcrumb of
+// ancestor task-text strings leading to (but not including) the task itself.
+// Filter values:
+//   'today' — task.date equals today's ISO date
+//   'week'  — task.date falls within the current Mon–Sun week
+export function getTasksWithDate(filter) {
+  const results = [];
+  const todayISO = getTodayISO();
+  const week = getWeekRange();
+
+  function matches(date) {
+    if (!date) return false;
+    if (filter === 'today') return date === todayISO;
+    if (filter === 'week') return date >= week.start && date <= week.end;
+    return false;
+  }
+
+  function walk(nodes, path) {
+    for (const node of nodes) {
+      if (matches(node.date)) {
+        results.push({ task: node, path: [...path] });
+      }
+      if (node.children && node.children.length > 0) {
+        walk(node.children, [...path, node.text]);
+      }
+    }
+  }
+
+  walk(state.root, []);
+  return results;
+}
+
 export function toggleTaskDone(id) {
   const node = findNode(state.root, id);
   if (!node) return;
@@ -296,6 +353,8 @@ export async function load() {
     const data = await res.json();
     state.root = data.root || [];
     state.selectedPath = data.selectedPath || [];
+    // Backward compat: tasks saved before the date feature lack `date`.
+    normalizeDates(state.root);
     return true;
   } catch (e) {
     console.warn('Failed to load state:', e);
@@ -361,6 +420,8 @@ export function loadSampleData() {
       ]
     }
   ];
+  // Sample nodes are built inline (not via createNode) — normalize `date`.
+  normalizeDates(state.root);
   state.selectedPath = [];
   emit();
 }
@@ -369,6 +430,8 @@ export function loadSampleData() {
 
 export function importTasks(root) {
   state.root = root;
+  // Imported trees may predate the date feature — normalize `date`.
+  normalizeDates(state.root);
   state.selectedPath = [];
   emit();
 }
