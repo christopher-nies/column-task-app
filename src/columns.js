@@ -34,6 +34,7 @@ let focusedIndex = 0;
 let dragState = null;     // { taskId, columnIndex, itemIndex }
 let justDroppedId = null; // task id that just landed, cleared after animation
 let pendingSlideBack = false; // set before backward navigation to trigger reverse column animation
+let pendingScrollSnap = false; // set when easeScrollTo pre-scrolls before a DOM rebuild (breadcrumb tap)
 
 // Double-tap tracking for mobile edit
 let lastTapId = null;
@@ -217,9 +218,20 @@ export function render(force = false) {
     });
   });
 
-  // Scroll: on touch devices ease to focused column; on desktop show rightmost
+  // Scroll: snap after breadcrumb tap (pre-scroll already done); ease on touch; rightmost on desktop
   requestAnimationFrame(() => {
-    if (isTouchDevice()) {
+    const snap = pendingScrollSnap;
+    pendingScrollSnap = false;
+    if (snap) {
+      // easeScrollTo already ran before this DOM rebuild — snap to position without animation.
+      // Disable scroll-behavior so the CSS 'smooth' doesn't re-animate this direct assignment.
+      const targetEl = columnsContainer.querySelector(`.column[data-column-index="${focusedColumn}"]`);
+      if (targetEl) {
+        columnsContainer.style.scrollBehavior = 'auto';
+        columnsContainer.scrollLeft = targetEl.offsetLeft - columnsContainer.offsetLeft;
+        requestAnimationFrame(() => { columnsContainer.style.scrollBehavior = ''; });
+      }
+    } else if (isTouchDevice()) {
       const targetEl = columnsContainer.querySelector(`.column[data-column-index="${focusedColumn}"]`);
       if (targetEl) {
         easeScrollTo(columnsContainer, targetEl.offsetLeft - columnsContainer.offsetLeft, 340);
@@ -612,12 +624,16 @@ function navigateToLevel(targetCol) {
   focusedColumn = targetCol;
   focusedIndex = idx >= 0 ? idx : 0;
 
-  if (isTouchDevice() && columnsContainer) {
-    // Scroll the existing DOM to the target column first, then update state.
-    // The DOM teardown happens after the animation lands so the transition is seamless.
+  if (columnsContainer) {
+    // Scroll the existing DOM to the target column first (the scroll IS the animation),
+    // then rebuild state. pendingScrollSnap tells render to snap scrollLeft instead of
+    // doing a second smooth scroll after the DOM teardown resets it to 0.
     const targetEl = columnsContainer.querySelector(`.column[data-column-index="${targetCol}"]`);
     const targetLeft = targetEl ? targetEl.offsetLeft - columnsContainer.offsetLeft : 0;
-    easeScrollTo(columnsContainer, targetLeft, 320, () => deselectColumn(targetCol));
+    easeScrollTo(columnsContainer, targetLeft, 320, () => {
+      pendingScrollSnap = true;
+      deselectColumn(targetCol);
+    });
   } else {
     deselectColumn(targetCol);
   }
@@ -799,7 +815,9 @@ function easeScrollTo(el, targetLeft, duration = 340, onComplete = null) {
   if (Math.abs(delta) < 1) { onComplete?.(); return; }
   const startTime = performance.now();
   const easeOutCubic = t => 1 - Math.pow(1 - t, 3);
+  // Disable both snap and smooth-scroll so neither CSS property fights the JS tween.
   el.style.scrollSnapType = 'none';
+  el.style.scrollBehavior = 'auto';
   function step(now) {
     const t = Math.min((now - startTime) / duration, 1);
     el.scrollLeft = startLeft + delta * easeOutCubic(t);
@@ -807,6 +825,7 @@ function easeScrollTo(el, targetLeft, duration = 340, onComplete = null) {
       requestAnimationFrame(step);
     } else {
       el.style.scrollSnapType = '';
+      el.style.scrollBehavior = '';
       onComplete?.();
     }
   }
@@ -872,15 +891,17 @@ export function addChildToFocused() {
 
 export function drillOut() {
   if (focusedColumn > 0) {
-    // Find what index the parent was at in its column
     const parentTasks = getColumnTasks(focusedColumn - 1);
     const selectedId = getSelectedIdForColumn(focusedColumn - 1);
     const parentIdx = parentTasks.findIndex(t => t.id === selectedId);
+    const col = focusedColumn;
 
-    deselectColumn(focusedColumn);
+    // Update UI state before deselectColumn so the subscription-triggered render
+    // sees the correct focused position and the backward slide animation flag.
     focusedColumn--;
     focusedIndex = parentIdx >= 0 ? parentIdx : 0;
-    render();
+    pendingSlideBack = true;
+    deselectColumn(col); // triggers render via subscription — no separate render() needed
   }
 }
 

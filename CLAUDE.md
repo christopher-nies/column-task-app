@@ -214,6 +214,8 @@ No test runner is currently configured. Verification is manual browser testing (
 | Docker + docker-compose | Done |
 | Manual browser testing of core flows | **Pending** |
 | Verify data persistence across reloads | **Pending** |
+| Breadcrumb tap animation (mobile) — scroll not smooth | **Pending** |
+| Date handling UX — past/overdue dates behaviour undefined | **Pending** |
 
 ---
 
